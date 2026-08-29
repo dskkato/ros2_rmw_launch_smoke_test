@@ -77,6 +77,8 @@ def generate_test_description():
             ],
             name='zenoh_router',
             output='screen',
+            sigterm_timeout=1.0,
+            sigkill_timeout=1.0,
         )
         actions.append(router)
 
