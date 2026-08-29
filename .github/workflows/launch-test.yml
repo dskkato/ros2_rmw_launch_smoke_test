@@ -19,18 +19,8 @@ env:
 
 jobs:
   launch-test:
-    name: launch test (${{ matrix.rmw }})
+    name: launch test (three RMWs, one job)
     runs-on: ubuntu-26.04
-    strategy:
-      fail-fast: false
-      matrix:
-        rmw:
-          - rmw_fastrtps_cpp
-          - rmw_cyclonedds_cpp
-          - rmw_zenoh_cpp
-
-    env:
-      RMW_IMPLEMENTATION: ${{ matrix.rmw }}
 
     steps:
       - name: Check out repository
@@ -58,6 +48,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.10.1
         with:
           manifest-path: ${{ runner.temp }}/ros2_lyrical/pixi.toml
+          run-install: false
 
       - name: Install pixi environment
         shell: bash
@@ -77,19 +68,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
-            set -euo pipefail
-            source "$ROS2_ROOT/setup.bash"
-            source install/local_setup.bash
-            colcon test --merge-install --event-handlers console_direct+
-            colcon test-result --verbose
-          '
+          for rmw in rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp; do
+            echo "===== Running launch test with ${rmw} ====="
+            RMW_IMPLEMENTATION="$rmw" \
+              pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
+                set -euo pipefail
+                source "$ROS2_ROOT/setup.bash"
+                source install/local_setup.bash
+                colcon test --merge-install --event-handlers console_direct+
+                colcon test-result --verbose
+              '
+          done
 
       - name: Upload colcon logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: colcon-logs-${{ matrix.rmw }}
+          name: colcon-logs
           path: |
             log/
             build/**/test_results/

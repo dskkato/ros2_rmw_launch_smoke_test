@@ -26,5 +26,5 @@ pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test --merge-insta
 pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test-result --verbose
 ```
 
-The pull-request workflow is the executable matrix specification for the three
-RMW cases; each matrix job publishes its own test log artifact when it runs.
+The pull-request workflow runs the three RMW cases sequentially in one job so
+the ROS archive and pixi environment are created only once.
