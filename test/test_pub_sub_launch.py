@@ -24,6 +24,7 @@ from launch.actions import SetEnvironmentVariable
 from launch.actions import TimerAction
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
+from launch.events.process import ShutdownProcess
 from launch.substitutions import FindExecutable
 from launch.substitutions import PathJoinSubstitution
 
@@ -85,12 +86,26 @@ def generate_test_description():
     actions.extend([
         TimerAction(period=1.0, actions=[subscriber]),
         TimerAction(period=3.0, actions=[publisher]),
-        RegisterEventHandler(OnProcessExit(
+    ])
+    if router is None:
+        actions.append(RegisterEventHandler(OnProcessExit(
             target_action=subscriber,
             on_exit=[EmitEvent(event=Shutdown())],
-        )),
-        ReadyToTest(),
-    ])
+        )))
+    else:
+        actions.extend([
+            RegisterEventHandler(OnProcessExit(
+                target_action=subscriber,
+                on_exit=[EmitEvent(event=ShutdownProcess(
+                    process_matcher=lambda process: process == router,
+                ))],
+            )),
+            RegisterEventHandler(OnProcessExit(
+                target_action=router,
+                on_exit=[EmitEvent(event=Shutdown())],
+            )),
+        ])
+    actions.append(ReadyToTest())
     return LaunchDescription(actions), {
         'publisher': publisher,
         'subscriber': subscriber,
