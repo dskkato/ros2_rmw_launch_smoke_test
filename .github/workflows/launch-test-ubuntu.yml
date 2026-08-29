@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
-            set -euo pipefail
+            set -eo pipefail
             source "$ROS2_ROOT/setup.bash"
             colcon build --merge-install --event-handlers console_direct+
           '
@@ -84,7 +84,7 @@ jobs:
             echo "Running launch test with ${rmw}"
             RMW_IMPLEMENTATION="$rmw" \
               pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
-                set -euo pipefail
+                set -eo pipefail
                 source "$ROS2_ROOT/setup.bash"
                 source install/local_setup.bash
                 colcon test --merge-install --event-handlers console_direct+

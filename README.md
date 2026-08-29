@@ -83,6 +83,12 @@ signal and process-group behavior allows `launch_testing` to shut down the
 router together with the rest of the launch. The Windows test has separate
 handling because this assumption does not hold reliably there.
 
+The ROS archive's `setup.bash` currently references optional variables such as
+`COLCON_TRACE` without defining them first. The Ubuntu workflow therefore keeps
+strict error checking in the outer shell, but does not enable `set -u` in the
+subshell that sources ROS setup files. Enabling nounset there makes setup fail
+before the package can be built.
+
 ## Findings and known Windows limitations
 
 ### Process shutdown is not equivalent to Ubuntu
