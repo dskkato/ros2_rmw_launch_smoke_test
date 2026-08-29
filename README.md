@@ -25,3 +25,6 @@ source install/local_setup.bash
 pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test --merge-install
 pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test-result --verbose
 ```
+
+The pull-request workflow is the executable matrix specification for the three
+RMW cases; each matrix job publishes its own test log artifact when it runs.
