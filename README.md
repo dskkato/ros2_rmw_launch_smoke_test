@@ -13,73 +13,52 @@ The packages are named `rmw_launch_smoke_test_py` and
 Both packages publish and receive the same five ordered `std_msgs/msg/String`
 messages.
 
-The GitHub Actions workflows use only ROS 2 Lyrical. The Windows workflow uses
-the official binary archive and pixi, while the Ubuntu reference workflow uses
-the ROS Tooling container described below. They provide one job per platform,
-and each job runs the same three RMW cases sequentially. The test launches a
-subscriber, then a publisher, and requires five ordered `std_msgs/msg/String`
-messages. For Zenoh, the test also starts `rmw_zenohd`, because the RMW requires
-a router for discovery.
+The GitHub Actions workflows use only ROS 2 Lyrical. Both workflows use the
+official `ros-tooling/setup-ros` action to install the standard ROS packages and
+build tools. They provide one job per platform, and each job runs the same three
+RMW cases sequentially. The test launches a subscriber, then a publisher, and
+requires five ordered `std_msgs/msg/String` messages. For Zenoh, the test also
+starts `rmw_zenohd`, because the RMW requires a router for discovery.
 
 ## Windows setup
 
-The workflow is the reference setup for this repository. It downloads the
-official Windows archive, installs its pixi environment, runs the ROS-specific
-Windows preparation script, and uses the Visual Studio x64 environment for
-building and testing.
+The workflow is the reference setup for this repository. It uses
+`ros-tooling/setup-ros` to install the official Windows ROS 2 binary and its
+standard dependencies, then uses the Visual Studio x64 environment for building
+and testing.
 
-The following is an abbreviated local version. Run the download part in
-PowerShell, then run the build and test commands from an x64 Native Tools
-Command Prompt for Visual Studio 2022. Adjust the Visual Studio installation
-path if the `Enterprise` edition is not installed.
-
-```powershell
-$ros2Prefix = Join-Path $PWD 'ros2_lyrical'
-$ros2Archive = 'ros2-lyrical-2026-08-07-windows-AMD64.zip'
-$ros2ReleaseTag = 'release-lyrical-20260807'
-$ros2ReleaseUrl = "https://github.com/ros2/ros2/releases/download/$ros2ReleaseTag/$ros2Archive"
-
-New-Item -ItemType Directory -Force -Path $ros2Prefix | Out-Null
-Invoke-WebRequest -Uri $ros2ReleaseUrl -OutFile (Join-Path $ros2Prefix $ros2Archive)
-Expand-Archive -Path (Join-Path $ros2Prefix $ros2Archive) -DestinationPath $ros2Prefix -Force
-```
+The action extracts ROS 2 Lyrical under `C:\dev\lyrical` on Windows. Run the
+following from an x64 Native Tools Command Prompt for Visual Studio 2022 after
+installing the action's dependencies, or adapt the commands for PowerShell.
 
 ```bat
-set ROS2_ROOT=%CD%\ros2_lyrical\ros2-windows
-set PIXI_MANIFEST=%ROS2_ROOT%\pixi.toml
-
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-pixi install --manifest-path "%PIXI_MANIFEST%"
-pixi run --manifest-path "%PIXI_MANIFEST%" python "%ROS2_ROOT%\preinstall_setup_windows.py"
-call "%ROS2_ROOT%\setup.bat"
-pixi run --manifest-path "%PIXI_MANIFEST%" colcon build --merge-install
+call C:\dev\lyrical\ros2-windows\setup.bat
+colcon build --merge-install
 call install\setup.bat
 
 set RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
-pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
+colcon test --merge-install --event-handlers console_direct+
+colcon test-result --verbose
 ```
 
 Set `RMW_IMPLEMENTATION` to `rmw_cyclonedds_cpp` or `rmw_zenoh_cpp` and repeat
 the last two commands to exercise the other implementations. The GitHub
-Actions workflow performs these three cases sequentially in one job, so the
-ROS archive and pixi environment are created only once.
+Actions workflow performs these three cases sequentially in one job, so the ROS
+environment is prepared only once.
 
 ## Ubuntu container reference
 
 `.github/workflows/launch-test-ubuntu.yml` is the reference implementation for
-the normal Ubuntu behavior. It follows the same container/action pattern as the
-reference workflow in `memfd_buffer_backend`: the job runs in
-`rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest` and
-uses `ros-tooling/action-ros-ci@v0.4`. The container already provides the
-Lyrical ROS installation and build tools, so Ubuntu does not need the Windows
-archive extraction or `preinstall_setup_windows.py` step.
+the normal Ubuntu behavior. The job runs in an `ubuntu:resolute` container,
+uses `ros-tooling/setup-ros@v0.7` to install the standard Lyrical packages and
+build tools, and then uses `ros-tooling/action-ros-ci@v0.4`. Ubuntu does not
+need the Windows archive extraction or `preinstall_setup_windows.py` step.
 
-The workflow invokes the action three times sequentially in the same job, once
-for each `RMW_IMPLEMENTATION`. Each invocation performs the standard checkout,
-dependency setup, build, and test flow for both packages. This intentionally
-matches the simple `memfd_buffer_backend` CI style while avoiding a three-job
-matrix.
+The workflow first uses `setup-ros` on an `ubuntu:resolute` container, then
+invokes `action-ros-ci` three times sequentially in the same job, once for each
+`RMW_IMPLEMENTATION`. Each invocation performs the standard checkout, dependency
+setup, build, and test flow for both packages while avoiding a three-job matrix.
 
 Each package has an Ubuntu and Windows launch file under its `test/` directory.
 The package CMake files select the platform-specific file. The Python package's
@@ -93,12 +72,8 @@ The C++ package runs `ament_lint_auto` on both platforms where the available
 tools permit it. Its CMake file excludes `ament_cmake_clang_tidy` on Windows
 because that check is not reliable in the ROS 2 Windows environment.
 
-When using the standalone Lyrical Linux archive instead of the ROS Tooling
-container, its `setup.bash` can reference optional variables such as
-`COLCON_TRACE` without defining them first. Do not enable `set -u` in the shell
-that sources ROS setup files; keep strict error checking in the outer command
-or initialize the optional variables first. The container/action workflow does
-not need this manual archive workaround.
+The workflows set `use-ros2-testing: true` because the current Lyrical packages
+are distributed from the ROS 2 testing repository.
 
 ## Findings and known Windows limitations
 
@@ -161,7 +136,8 @@ Zenoh router used here.
 
 ## Ubuntu local test
 
-The CI container can also be used locally. From the repository root:
+For a local quick test, use a ROS Tooling container with the same Lyrical base
+environment. From the repository root:
 
 ```bash
 docker run --rm -it \
@@ -182,6 +158,6 @@ done
 ```
 
 The Windows workflow is intentionally separate: it uses `setup.bat`, the Visual
-Studio environment, a Windows archive, pixi, and the Windows-specific shutdown
-behavior described above. Ubuntu is container-based so its base operating
-system and ROS-related dependencies remain easier to reproduce.
+Studio environment, the Windows-specific shutdown behavior described above, and
+the Windows support provided by `setup-ros`. Ubuntu is container-based so its
+base operating system and ROS-related dependencies remain easier to reproduce.
