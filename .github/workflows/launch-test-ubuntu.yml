@@ -1,0 +1,83 @@
+name: ROS 2 Lyrical RMW launch test (Ubuntu container)
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launch-test:
+    name: launch test on Ubuntu container (three RMWs, one job)
+    runs-on: ubuntu-latest
+    container:
+      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest
+
+    steps:
+      - name: Run launch test with Fast DDS
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+        with:
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
+
+      - name: Run launch test with Cyclone DDS
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+        with:
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
+
+      - name: Run launch test with Zenoh
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_zenoh_cpp
+        with:
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
+
+      - name: Upload colcon logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colcon-logs-ubuntu
+          path: ros_ws/log/
+          if-no-files-found: ignore
