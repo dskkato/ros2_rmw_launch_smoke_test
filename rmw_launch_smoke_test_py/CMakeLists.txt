@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(rmw_launch_smoke_test)
+project(rmw_launch_smoke_test_py)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)

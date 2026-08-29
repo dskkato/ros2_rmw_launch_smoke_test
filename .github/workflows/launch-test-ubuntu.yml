@@ -25,7 +25,7 @@ jobs:
         env:
           RMW_IMPLEMENTATION: rmw_fastrtps_cpp
         with:
-          package-name: rmw_launch_smoke_test
+          package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
           target-ros2-distro: lyrical
           no-symlink-install: true
           colcon-defaults: |
@@ -43,7 +43,7 @@ jobs:
         env:
           RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
         with:
-          package-name: rmw_launch_smoke_test
+          package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
           target-ros2-distro: lyrical
           no-symlink-install: true
           colcon-defaults: |
@@ -61,7 +61,7 @@ jobs:
         env:
           RMW_IMPLEMENTATION: rmw_zenoh_cpp
         with:
-          package-name: rmw_launch_smoke_test
+          package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
           target-ros2-distro: lyrical
           no-symlink-install: true
           colcon-defaults: |
