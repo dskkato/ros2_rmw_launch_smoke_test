@@ -22,8 +22,15 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(launch_testing_ament_cmake REQUIRED)
+
+  if(WIN32)
+    set(launch_test_file test/test_pub_sub_launch_windows.py)
+  else()
+    set(launch_test_file test/test_pub_sub_launch_ubuntu.py)
+  endif()
+
   add_launch_test(
-    test/test_pub_sub_launch.py
+    ${launch_test_file}
     TARGET test_pub_sub_launch
     TIMEOUT 45
   )

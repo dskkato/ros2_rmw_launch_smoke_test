@@ -8,12 +8,12 @@ against three RMW implementations:
 - `rmw_cyclonedds_cpp`
 - `rmw_zenoh_cpp`
 
-The GitHub Actions workflow uses only ROS 2 Lyrical and installs the ROS build
-tooling with the `pixi.toml` shipped in the official Lyrical binary archive. The
-verification environment is Windows (`windows-2022`). The test launches a
-subscriber, then a publisher, and requires five ordered `std_msgs/msg/String`
-messages. For Zenoh, the test also starts `rmw_zenohd`, because the RMW requires
-a router for discovery.
+The GitHub Actions workflows use only ROS 2 Lyrical and install the ROS build
+tooling with pixi. They provide both a Windows verification job and an Ubuntu
+container reference job. Each platform has one job that runs the same three RMW
+cases sequentially. The test launches a subscriber, then a publisher, and
+requires five ordered `std_msgs/msg/String` messages. For Zenoh, the test also
+starts `rmw_zenohd`, because the RMW requires a router for discovery.
 
 ## Windows setup
 
@@ -58,6 +58,30 @@ Set `RMW_IMPLEMENTATION` to `rmw_cyclonedds_cpp` or `rmw_zenoh_cpp` and repeat
 the last two commands to exercise the other implementations. The GitHub
 Actions workflow performs these three cases sequentially in one job, so the
 ROS archive and pixi environment are created only once.
+
+## Ubuntu container reference
+
+`.github/workflows/launch-test-ubuntu.yml` is the reference implementation for
+the normal Ubuntu behavior. It runs on a GitHub-hosted Ubuntu runner with an
+`ubuntu:26.04` job container, installs only the container prerequisites, and
+then:
+
+1. extracts the official ROS 2 Lyrical Ubuntu archive;
+2. obtains the Lyrical `pixi.toml` and installs the pixi environment;
+3. builds the package once; and
+4. runs the Fast DDS, Cyclone DDS, and Zenoh tests sequentially in the same job.
+
+The Ubuntu launch file is
+`test/test_pub_sub_launch_ubuntu.py`. The CMake file selects it on non-Windows
+platforms, while `test/test_pub_sub_launch_windows.py` is selected on Windows.
+The launch logic is intentionally mostly duplicated for now so that the
+platform-specific process-management behavior is visible in the two files.
+
+The Ubuntu test uses `python3` to run the installed Python nodes and starts the
+Zenoh router as a normal launch-managed `ExecuteProcess`. Ubuntu's usual POSIX
+signal and process-group behavior allows `launch_testing` to shut down the
+router together with the rest of the launch. The Windows test has separate
+handling because this assumption does not hold reliably there.
 
 ## Findings and known Windows limitations
 
@@ -118,10 +142,10 @@ ROS 2 process management. Other approaches worth evaluating are:
 The last two options may be useful when a test needs more than the single
 Zenoh router used here.
 
-## Local test
+## Ubuntu local test
 
-On a Lyrical installation with the official pixi environment available, the
-Linux-style commands are:
+On an Ubuntu Lyrical installation with the official pixi environment available,
+the commands corresponding to the container workflow are:
 
 ```bash
 source /path/to/ros2-linux/setup.bash
@@ -131,7 +155,8 @@ pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test --merge-insta
 pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test-result --verbose
 ```
 
-These commands describe the conventional Ubuntu flow. The active CI
-verification is Windows, where `setup.bat`, the Visual Studio environment, and
-the Windows-specific shutdown behavior above must be used instead. Ubuntu/Docker
-is intentionally not required for the current smoke-test gate.
+The Ubuntu workflow uses these commands inside its container. The Windows
+workflow is intentionally separate: it uses `setup.bat`, the Visual Studio
+environment, a Windows archive, and the Windows-specific shutdown behavior
+described above. Ubuntu is container-based so its base operating system and
+ROS-related dependencies remain easier to reproduce.
