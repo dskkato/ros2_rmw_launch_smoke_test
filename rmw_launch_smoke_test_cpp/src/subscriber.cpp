@@ -30,14 +30,14 @@ public:
   {
     subscription_ = create_subscription<std_msgs::msg::String>(
       "smoke_chatter", 10,
-      [this](const std_msgs::msg::String::SharedPtr message) {receive(message);});
+      [this](std_msgs::msg::String::ConstSharedPtr message) {receive(message);});
     watchdog_ = create_wall_timer(100ms, [this]() {check_progress();});
   }
 
   bool failed() const {return failed_;}
 
 private:
-  void receive(const std_msgs::msg::String::SharedPtr message)
+  void receive(std_msgs::msg::String::ConstSharedPtr message)
   {
     const auto expected = "hello-" + std::to_string(next_message_);
     if (message->data != expected) {
