@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import os
+import shutil
+import subprocess
 import unittest
 
 from launch import LaunchDescription
@@ -24,7 +26,6 @@ from launch.actions import SetEnvironmentVariable
 from launch.actions import TimerAction
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
-from launch.events.process import ShutdownProcess
 from launch.substitutions import FindExecutable
 from launch.substitutions import PathJoinSubstitution
 
@@ -33,6 +34,8 @@ from launch_ros.substitutions import FindPackageShare
 import launch_testing
 from launch_testing.actions import ReadyToTest
 from launch_testing.asserts import assertExitCodes
+
+import psutil
 
 import pytest
 
@@ -67,49 +70,33 @@ def generate_test_description():
     actions = [
         SetEnvironmentVariable('ROS_DOMAIN_ID', domain_id),
     ]
-    router = None
+    router_process = None
     if os.environ.get('RMW_IMPLEMENTATION') == 'rmw_zenoh_cpp':
-        router = ExecuteProcess(
-            cmd=[
-                FindExecutable(name='ros2'),
-                'run',
-                'rmw_zenoh_cpp',
-                'rmw_zenohd',
-            ],
-            name='zenoh_router',
-            output='screen',
-            sigterm_timeout='1',
-            sigkill_timeout='1',
+        ros2_executable = shutil.which('ros2')
+        if ros2_executable is None:
+            raise RuntimeError('The ros2 executable is required for Zenoh')
+        router_environment = os.environ.copy()
+        router_environment['ROS_DOMAIN_ID'] = domain_id
+        router_process = subprocess.Popen(
+            [ros2_executable, 'run', 'rmw_zenoh_cpp', 'rmw_zenohd'],
+            env=router_environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        actions.append(router)
 
     actions.extend([
         TimerAction(period=1.0, actions=[subscriber]),
         TimerAction(period=3.0, actions=[publisher]),
     ])
-    if router is None:
-        actions.append(RegisterEventHandler(OnProcessExit(
-            target_action=subscriber,
-            on_exit=[EmitEvent(event=Shutdown())],
-        )))
-    else:
-        actions.extend([
-            RegisterEventHandler(OnProcessExit(
-                target_action=subscriber,
-                on_exit=[EmitEvent(event=ShutdownProcess(
-                    process_matcher=lambda process: process == router,
-                ))],
-            )),
-            RegisterEventHandler(OnProcessExit(
-                target_action=router,
-                on_exit=[EmitEvent(event=Shutdown())],
-            )),
-        ])
+    actions.append(RegisterEventHandler(OnProcessExit(
+        target_action=subscriber,
+        on_exit=[EmitEvent(event=Shutdown())],
+    )))
     actions.append(ReadyToTest())
     return LaunchDescription(actions), {
         'publisher': publisher,
         'subscriber': subscriber,
-        'router': router,
+        'router_process': router_process,
     }
 
 
@@ -125,7 +112,18 @@ class TestPubSub(unittest.TestCase):
 class TestPubSubShutdown(unittest.TestCase):
     """Ensure the nodes and optional Zenoh router stop cleanly."""
 
-    def test_exit_codes(self, proc_info):
+    def test_exit_codes(self, proc_info, router_process):
+        if router_process is not None and router_process.poll() is None:
+            router = psutil.Process(router_process.pid)
+            descendants = router.children(recursive=True)
+            for process in descendants:
+                process.terminate()
+            router.terminate()
+            _, alive = psutil.wait_procs(descendants + [router], timeout=3)
+            for process in alive:
+                process.kill()
+            router_process.wait(timeout=3)
+
         allowable_exit_codes = [0, -2, -15]
         if os.name == 'nt':
             # launch_testing escalates SIGINT to SIGTERM for console processes
