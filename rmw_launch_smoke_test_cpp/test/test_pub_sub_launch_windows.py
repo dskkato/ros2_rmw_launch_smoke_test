@@ -41,6 +41,7 @@ import pytest
 def generate_test_description():
     """Run the C++ publisher and subscriber with the selected RMW."""
     domain_id = str(100 + os.getpid() % 100)
+    zenoh_router_port = 7448
     subscriber = Node(
         package='rmw_launch_smoke_test_cpp',
         executable='subscriber',
@@ -54,6 +55,10 @@ def generate_test_description():
 
     actions = [
         SetEnvironmentVariable('ROS_DOMAIN_ID', domain_id),
+        SetEnvironmentVariable(
+            'ZENOH_CONFIG_OVERRIDE',
+            f'connect/endpoints=["tcp/127.0.0.1:{zenoh_router_port}"]'),
+        SetEnvironmentVariable('ZENOH_ROUTER_CHECK_ATTEMPTS', '10'),
     ]
     router_process = None
     if os.environ.get('RMW_IMPLEMENTATION') == 'rmw_zenoh_cpp':
@@ -62,6 +67,8 @@ def generate_test_description():
             raise RuntimeError('The ros2 executable is required for Zenoh')
         router_environment = os.environ.copy()
         router_environment['ROS_DOMAIN_ID'] = domain_id
+        router_environment['ZENOH_CONFIG_OVERRIDE'] = (
+            f'listen/endpoints=["tcp/127.0.0.1:{zenoh_router_port}"]')
         router_process = subprocess.Popen(
             [ros2_executable, 'run', 'rmw_zenoh_cpp', 'rmw_zenohd'],
             env=router_environment,
