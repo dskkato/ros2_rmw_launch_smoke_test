@@ -8,12 +8,13 @@ against three RMW implementations:
 - `rmw_cyclonedds_cpp`
 - `rmw_zenoh_cpp`
 
-The GitHub Actions workflows use only ROS 2 Lyrical and install the ROS build
-tooling with pixi. They provide both a Windows verification job and an Ubuntu
-container reference job. Each platform has one job that runs the same three RMW
-cases sequentially. The test launches a subscriber, then a publisher, and
-requires five ordered `std_msgs/msg/String` messages. For Zenoh, the test also
-starts `rmw_zenohd`, because the RMW requires a router for discovery.
+The GitHub Actions workflows use only ROS 2 Lyrical. The Windows workflow uses
+the official binary archive and pixi, while the Ubuntu reference workflow uses
+the ROS Tooling container described below. They provide one job per platform,
+and each job runs the same three RMW cases sequentially. The test launches a
+subscriber, then a publisher, and requires five ordered `std_msgs/msg/String`
+messages. For Zenoh, the test also starts `rmw_zenohd`, because the RMW requires
+a router for discovery.
 
 ## Windows setup
 
@@ -62,14 +63,18 @@ ROS archive and pixi environment are created only once.
 ## Ubuntu container reference
 
 `.github/workflows/launch-test-ubuntu.yml` is the reference implementation for
-the normal Ubuntu behavior. It runs on a GitHub-hosted Ubuntu runner with an
-`ubuntu:26.04` job container, installs only the container prerequisites, and
-then:
+the normal Ubuntu behavior. It follows the same container/action pattern as the
+reference workflow in `memfd_buffer_backend`: the job runs in
+`rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest` and
+uses `ros-tooling/action-ros-ci@v0.4`. The container already provides the
+Lyrical ROS installation and build tools, so Ubuntu does not need the Windows
+archive extraction or `preinstall_setup_windows.py` step.
 
-1. extracts the official ROS 2 Lyrical Ubuntu archive;
-2. obtains the Lyrical `pixi.toml` and installs the pixi environment;
-3. builds the package once; and
-4. runs the Fast DDS, Cyclone DDS, and Zenoh tests sequentially in the same job.
+The workflow invokes the action three times sequentially in the same job, once
+for each `RMW_IMPLEMENTATION`. Each invocation performs the standard checkout,
+dependency setup, build, and test flow for this package. This intentionally
+matches the simple `memfd_buffer_backend` CI style while avoiding a three-job
+matrix.
 
 The Ubuntu launch file is
 `test/test_pub_sub_launch_ubuntu.py`. The CMake file selects it on non-Windows
@@ -77,17 +82,20 @@ platforms, while `test/test_pub_sub_launch_windows.py` is selected on Windows.
 The launch logic is intentionally mostly duplicated for now so that the
 platform-specific process-management behavior is visible in the two files.
 
-The Ubuntu test uses `python3` to run the installed Python nodes and starts the
-Zenoh router as a normal launch-managed `ExecuteProcess`. Ubuntu's usual POSIX
-signal and process-group behavior allows `launch_testing` to shut down the
-router together with the rest of the launch. The Windows test has separate
-handling because this assumption does not hold reliably there.
+The Ubuntu launch file is
+`test/test_pub_sub_launch_ubuntu.py`. It uses `python3` to run the installed
+Python nodes and starts the Zenoh router as a normal launch-managed
+`ExecuteProcess`. Ubuntu's usual POSIX signal and process-group behavior allows
+`launch_testing` to shut down the router together with the rest of the launch.
+The Windows launch file is `test/test_pub_sub_launch_windows.py`; it has
+separate handling because this assumption does not hold reliably there.
 
-The ROS archive's `setup.bash` currently references optional variables such as
-`COLCON_TRACE` without defining them first. The Ubuntu workflow therefore keeps
-strict error checking in the outer shell, but does not enable `set -u` in the
-subshell that sources ROS setup files. Enabling nounset there makes setup fail
-before the package can be built.
+When using the standalone Lyrical Linux archive instead of the ROS Tooling
+container, its `setup.bash` can reference optional variables such as
+`COLCON_TRACE` without defining them first. Do not enable `set -u` in the shell
+that sources ROS setup files; keep strict error checking in the outer command
+or initialize the optional variables first. The container/action workflow does
+not need this manual archive workaround.
 
 ## Findings and known Windows limitations
 
@@ -150,19 +158,27 @@ Zenoh router used here.
 
 ## Ubuntu local test
 
-On an Ubuntu Lyrical installation with the official pixi environment available,
-the commands corresponding to the container workflow are:
+The CI container can also be used locally. From the repository root:
 
 ```bash
-source /path/to/ros2-linux/setup.bash
-pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon build --merge-install
+docker run --rm -it \
+  -v "$PWD:/work/src/rmw_launch_smoke_test" \
+  -w /work \
+  rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest \
+  bash
+
+source /opt/ros/lyrical/setup.bash
+colcon build --merge-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 source install/local_setup.bash
-pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test --merge-install
-pixi run --manifest-path /path/to/ros2-linux/pixi.toml colcon test-result --verbose
+
+for rmw in rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp; do
+  RMW_IMPLEMENTATION="$rmw" colcon test --merge-install \
+    --event-handlers console_direct+
+  colcon test-result --verbose
+done
 ```
 
-The Ubuntu workflow uses these commands inside its container. The Windows
-workflow is intentionally separate: it uses `setup.bat`, the Visual Studio
-environment, a Windows archive, and the Windows-specific shutdown behavior
-described above. Ubuntu is container-based so its base operating system and
-ROS-related dependencies remain easier to reproduce.
+The Windows workflow is intentionally separate: it uses `setup.bat`, the Visual
+Studio environment, a Windows archive, pixi, and the Windows-specific shutdown
+behavior described above. Ubuntu is container-based so its base operating
+system and ROS-related dependencies remain easier to reproduce.

@@ -12,92 +12,72 @@ on:
 permissions:
   contents: read
 
-env:
-  ROS_DISTRO: lyrical
-  ROS_RELEASE_TAG: release-lyrical-20260807
-  ROS_ARCHIVE: ros2-lyrical-2026-08-07-ubuntu2604-x86_64.tar.bz2
-
 jobs:
   launch-test:
     name: launch test on Ubuntu container (three RMWs, one job)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     container:
-      image: ubuntu:26.04
+      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest
 
     steps:
-      - name: Install container prerequisites
-        shell: bash
-        run: |
-          set -euo pipefail
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install --yes \
-            bzip2 ca-certificates curl git tar
-
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Download ROS 2 Lyrical archive
-        shell: bash
-        run: |
-          set -euo pipefail
-          ros2_prefix="${RUNNER_TEMP}/ros2_lyrical"
-          release_url="https://github.com/ros2/ros2/releases/download/${ROS_RELEASE_TAG}/${ROS_ARCHIVE}"
-          mkdir -p "$ros2_prefix"
-          curl --fail --location --retry 3 "$release_url" \
-            --output "${ros2_prefix}/${ROS_ARCHIVE}"
-          tar --extract --bzip2 --file "${ros2_prefix}/${ROS_ARCHIVE}" \
-            --directory "$ros2_prefix"
-          curl --fail --location --retry 3 \
-            "https://raw.githubusercontent.com/ros2/ros2/lyrical/pixi.toml" \
-            --output "${ros2_prefix}/pixi.toml"
-          echo "ROS2_ROOT=${ros2_prefix}/ros2-linux" >> "$GITHUB_ENV"
-          echo "PIXI_MANIFEST=${ros2_prefix}/pixi.toml" >> "$GITHUB_ENV"
-
-      - name: Set up pixi
-        uses: prefix-dev/setup-pixi@v0.10.1
+      - name: Run launch test with Fast DDS
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_fastrtps_cpp
         with:
-          manifest-path: ${{ runner.temp }}/ros2_lyrical/pixi.toml
-          run-install: false
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
 
-      - name: Install pixi environment
-        shell: bash
-        run: pixi install --manifest-path "$PIXI_MANIFEST"
+      - name: Run launch test with Cyclone DDS
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+        with:
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
 
-      - name: Build package
-        shell: bash
-        run: |
-          set -euo pipefail
-          pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
-            set -eo pipefail
-            source "$ROS2_ROOT/setup.bash"
-            colcon build --merge-install --event-handlers console_direct+
-          '
-
-      - name: Run launch tests sequentially for all RMWs
-        shell: bash
-        run: |
-          set -euo pipefail
-          for rmw in \
-            rmw_fastrtps_cpp \
-            rmw_cyclonedds_cpp \
-            rmw_zenoh_cpp; do
-            echo "Running launch test with ${rmw}"
-            RMW_IMPLEMENTATION="$rmw" \
-              pixi run --manifest-path "$PIXI_MANIFEST" bash -c '
-                set -eo pipefail
-                source "$ROS2_ROOT/setup.bash"
-                source install/local_setup.bash
-                colcon test --merge-install --event-handlers console_direct+
-                colcon test-result --verbose
-              '
-          done
+      - name: Run launch test with Zenoh
+        uses: ros-tooling/action-ros-ci@v0.4
+        env:
+          RMW_IMPLEMENTATION: rmw_zenoh_cpp
+        with:
+          package-name: rmw_launch_smoke_test
+          target-ros2-distro: lyrical
+          no-symlink-install: true
+          colcon-defaults: |
+            {
+              "build": {
+                "cmake-args": [
+                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                ]
+              }
+            }
+          coverage-result: false
 
       - name: Upload colcon logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: colcon-logs-ubuntu
-          path: |
-            log/
-            build/**/test_results/
+          path: ros_ws/log/
           if-no-files-found: ignore
