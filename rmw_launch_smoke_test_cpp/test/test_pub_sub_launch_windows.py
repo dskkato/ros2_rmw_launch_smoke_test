@@ -20,16 +20,13 @@ import unittest
 
 from launch import LaunchDescription
 from launch.actions import EmitEvent
-from launch.actions import ExecuteProcess
 from launch.actions import RegisterEventHandler
 from launch.actions import SetEnvironmentVariable
 from launch.actions import TimerAction
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
-from launch.substitutions import FindExecutable
-from launch.substitutions import PathJoinSubstitution
 
-from launch_ros.substitutions import FindPackageShare
+from launch_ros.actions import Node
 
 import launch_testing
 from launch_testing.actions import ReadyToTest
@@ -42,33 +39,26 @@ import pytest
 
 @pytest.mark.launch_test
 def generate_test_description():
-    """Run a publisher and subscriber using the selected RMW implementation."""
+    """Run the C++ publisher and subscriber with the selected RMW."""
     domain_id = str(100 + os.getpid() % 100)
-    subscriber = ExecuteProcess(
-        cmd=[
-            FindExecutable(name='python'),
-            PathJoinSubstitution([
-                FindPackageShare('rmw_launch_smoke_test'),
-                'scripts',
-                'subscriber.py',
-            ]),
-        ],
+    zenoh_router_port = 7448
+    subscriber = Node(
+        package='rmw_launch_smoke_test_cpp',
+        executable='subscriber',
         output='screen',
     )
-    publisher = ExecuteProcess(
-        cmd=[
-            FindExecutable(name='python'),
-            PathJoinSubstitution([
-                FindPackageShare('rmw_launch_smoke_test'),
-                'scripts',
-                'publisher.py',
-            ]),
-        ],
+    publisher = Node(
+        package='rmw_launch_smoke_test_cpp',
+        executable='publisher',
         output='screen',
     )
 
     actions = [
         SetEnvironmentVariable('ROS_DOMAIN_ID', domain_id),
+        SetEnvironmentVariable(
+            'ZENOH_CONFIG_OVERRIDE',
+            f'connect/endpoints=["tcp/127.0.0.1:{zenoh_router_port}"]'),
+        SetEnvironmentVariable('ZENOH_ROUTER_CHECK_ATTEMPTS', '10'),
     ]
     router_process = None
     if os.environ.get('RMW_IMPLEMENTATION') == 'rmw_zenoh_cpp':
@@ -77,6 +67,8 @@ def generate_test_description():
             raise RuntimeError('The ros2 executable is required for Zenoh')
         router_environment = os.environ.copy()
         router_environment['ROS_DOMAIN_ID'] = domain_id
+        router_environment['ZENOH_CONFIG_OVERRIDE'] = (
+            f'listen/endpoints=["tcp/127.0.0.1:{zenoh_router_port}"]')
         router_process = subprocess.Popen(
             [ros2_executable, 'run', 'rmw_zenoh_cpp', 'rmw_zenohd'],
             env=router_environment,
@@ -127,6 +119,6 @@ class TestPubSubShutdown(unittest.TestCase):
         allowable_exit_codes = [0, -2, -15]
         if os.name == 'nt':
             # launch_testing escalates SIGINT to SIGTERM for console processes
-            # on Windows, where Python reports that termination as exit code 1.
+            # on Windows, where C++ reports that termination as exit code 1.
             allowable_exit_codes.append(1)
         assertExitCodes(proc_info, allowable_exit_codes=allowable_exit_codes)

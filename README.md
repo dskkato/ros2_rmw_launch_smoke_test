@@ -1,12 +1,17 @@
 # ROS 2 RMW launch smoke test
 
 This repository is a deliberately small CI probe for ROS 2 pub/sub communication.
-It builds one package and runs one `launch_testing` test with the same test code
-against three RMW implementations:
+It builds two packages and runs Python and C++ `launch_testing` tests against
+three RMW implementations:
 
 - `rmw_fastrtps_cpp`
 - `rmw_cyclonedds_cpp`
 - `rmw_zenoh_cpp`
+
+The packages are named `rmw_launch_smoke_test_py` and
+`rmw_launch_smoke_test_cpp` so that the implementation under test is explicit.
+Both packages publish and receive the same five ordered `std_msgs/msg/String`
+messages.
 
 The GitHub Actions workflows use only ROS 2 Lyrical. The Windows workflow uses
 the official binary archive and pixi, while the Ubuntu reference workflow uses
@@ -72,23 +77,21 @@ archive extraction or `preinstall_setup_windows.py` step.
 
 The workflow invokes the action three times sequentially in the same job, once
 for each `RMW_IMPLEMENTATION`. Each invocation performs the standard checkout,
-dependency setup, build, and test flow for this package. This intentionally
+dependency setup, build, and test flow for both packages. This intentionally
 matches the simple `memfd_buffer_backend` CI style while avoiding a three-job
 matrix.
 
-The Ubuntu launch file is
-`test/test_pub_sub_launch_ubuntu.py`. The CMake file selects it on non-Windows
-platforms, while `test/test_pub_sub_launch_windows.py` is selected on Windows.
-The launch logic is intentionally mostly duplicated for now so that the
-platform-specific process-management behavior is visible in the two files.
+Each package has an Ubuntu and Windows launch file under its `test/` directory.
+The package CMake files select the platform-specific file. The Python package's
+Ubuntu test uses `python3` to run the installed Python nodes. The C++ package
+uses `launch_ros.actions.Node` to run its installed publisher and subscriber
+executables. Both tests start the Zenoh router as a normal launch-managed
+`ExecuteProcess` on Ubuntu; the Windows tests use separate router cleanup
+because this assumption does not hold reliably there.
 
-The Ubuntu launch file is
-`test/test_pub_sub_launch_ubuntu.py`. It uses `python3` to run the installed
-Python nodes and starts the Zenoh router as a normal launch-managed
-`ExecuteProcess`. Ubuntu's usual POSIX signal and process-group behavior allows
-`launch_testing` to shut down the router together with the rest of the launch.
-The Windows launch file is `test/test_pub_sub_launch_windows.py`; it has
-separate handling because this assumption does not hold reliably there.
+The C++ package runs `ament_lint_auto` on both platforms where the available
+tools permit it. Its CMake file excludes `ament_cmake_clang_tidy` on Windows
+because that check is not reliable in the ROS 2 Windows environment.
 
 When using the standalone Lyrical Linux archive instead of the ROS Tooling
 container, its `setup.bash` can reference optional variables such as
