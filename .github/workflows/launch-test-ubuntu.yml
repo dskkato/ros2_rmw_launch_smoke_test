@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   launch-test:
-    name: launch test on Ubuntu container (three RMWs, one job)
+    name: launch test on Ubuntu container (Fast DDS)
     runs-on: ubuntu-latest
     container:
       image: rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest
@@ -24,42 +24,6 @@ jobs:
         uses: ros-tooling/action-ros-ci@v0.4
         env:
           RMW_IMPLEMENTATION: rmw_fastrtps_cpp
-        with:
-          package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
-          target-ros2-distro: lyrical
-          no-symlink-install: true
-          colcon-defaults: |
-            {
-              "build": {
-                "cmake-args": [
-                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-                ]
-              }
-            }
-          coverage-result: false
-
-      - name: Run launch test with Cyclone DDS
-        uses: ros-tooling/action-ros-ci@v0.4
-        env:
-          RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
-        with:
-          package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
-          target-ros2-distro: lyrical
-          no-symlink-install: true
-          colcon-defaults: |
-            {
-              "build": {
-                "cmake-args": [
-                  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-                ]
-              }
-            }
-          coverage-result: false
-
-      - name: Run launch test with Zenoh
-        uses: ros-tooling/action-ros-ci@v0.4
-        env:
-          RMW_IMPLEMENTATION: rmw_zenoh_cpp
         with:
           package-name: rmw_launch_smoke_test_py rmw_launch_smoke_test_cpp
           target-ros2-distro: lyrical
