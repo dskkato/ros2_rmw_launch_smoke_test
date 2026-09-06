@@ -24,11 +24,10 @@ using namespace std::chrono_literals;
 class SmokePublisher : public rclcpp::Node
 {
 public:
-  SmokePublisher()
-  : Node("smoke_publisher"), count_(0)
+  SmokePublisher() : Node("smoke_publisher"), count_(0)
   {
     publisher_ = create_publisher<std_msgs::msg::String>("smoke_chatter", 10);
-    publish_timer_ = create_wall_timer(200ms, [this]() {publish();});
+    publish_timer_ = create_wall_timer(200ms, [this]() { publish(); });
   }
 
 private:
@@ -42,7 +41,7 @@ private:
 
     if (count_ == 5) {
       publish_timer_->cancel();
-      stop_timer_ = create_wall_timer(200ms, []() {rclcpp::shutdown();});
+      stop_timer_ = create_wall_timer(200ms, []() { rclcpp::shutdown(); });
     }
   }
 

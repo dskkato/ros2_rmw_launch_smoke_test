@@ -15,8 +15,9 @@ messages.
 
 The GitHub Actions workflows use only ROS 2 Lyrical. The Windows workflow uses
 the official binary archive and pixi, while the Ubuntu reference workflow uses
-the ROS Tooling container described below. They provide one job per platform,
-and each job runs the same three RMW cases sequentially. The test launches a
+the ROS Tooling container described below. They provide one job per platform.
+The Windows workflow runs the three RMW cases sequentially, while the Ubuntu
+workflow currently runs Fast DDS only. The test launches a
 subscriber, then a publisher, and requires five ordered `std_msgs/msg/String`
 messages. For Zenoh, the test also starts `rmw_zenohd`, because the RMW requires
 a router for discovery.
@@ -75,11 +76,9 @@ uses `ros-tooling/action-ros-ci@v0.4`. The container already provides the
 Lyrical ROS installation and build tools, so Ubuntu does not need the Windows
 archive extraction or `preinstall_setup_windows.py` step.
 
-The workflow invokes the action three times sequentially in the same job, once
-for each `RMW_IMPLEMENTATION`. Each invocation performs the standard checkout,
-dependency setup, build, and test flow for both packages. This intentionally
-matches the simple `memfd_buffer_backend` CI style while avoiding a three-job
-matrix.
+The workflow invokes the action once with `RMW_IMPLEMENTATION=rmw_fastrtps_cpp`.
+The action performs the standard checkout, dependency setup, build, and test
+flow for both packages.
 
 Each package has an Ubuntu and Windows launch file under its `test/` directory.
 The package CMake files select the platform-specific file. The Python package's
@@ -89,9 +88,12 @@ executables. Both tests start the Zenoh router as a normal launch-managed
 `ExecuteProcess` on Ubuntu; the Windows tests use separate router cleanup
 because this assumption does not hold reliably there.
 
-The C++ package runs `ament_lint_auto` on both platforms where the available
-tools permit it. Its CMake file excludes `ament_cmake_clang_tidy` on Windows
-because that check is not reliable in the ROS 2 Windows environment.
+The C++ package runs `ament_lint_auto` on both platforms. The Windows workflow
+replaces the archive's `clang-format` pixi dependency with `clang-tools` so
+that it also provides `clang-tidy`. Until the upstream Windows executable
+lookup fix from [ament/ament_lint#591](https://github.com/ament/ament_lint/pull/591)
+is available in the ROS archive, the workflow applies the corresponding patch
+before building the packages.
 
 When using the standalone Lyrical Linux archive instead of the ROS Tooling
 container, its `setup.bash` can reference optional variables such as

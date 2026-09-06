@@ -25,16 +25,19 @@ class SmokeSubscriber : public rclcpp::Node
 {
 public:
   SmokeSubscriber()
-  : Node("smoke_subscriber"), received_(0), next_message_(0), failed_(false),
+  : Node("smoke_subscriber"),
+    received_(0),
+    next_message_(0),
+    failed_(false),
     deadline_(std::chrono::steady_clock::now() + 20s)
   {
     subscription_ = create_subscription<std_msgs::msg::String>(
       "smoke_chatter", 10,
-      [this](std_msgs::msg::String::ConstSharedPtr message) {receive(message);});
-    watchdog_ = create_wall_timer(100ms, [this]() {check_progress();});
+      [this](std_msgs::msg::String::ConstSharedPtr message) { receive(message); });
+    watchdog_ = create_wall_timer(100ms, [this]() { check_progress(); });
   }
 
-  bool failed() const {return failed_;}
+  bool failed() const { return failed_; }
 
 private:
   void receive(std_msgs::msg::String::ConstSharedPtr message)
