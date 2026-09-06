@@ -113,7 +113,7 @@ jobs:
           call "%ROS2_ROOT%\setup.bat"
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon build --merge-install --event-handlers console_direct+ --cmake-args -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: Run Windows tests with Fast DDS (skip launch test)
+      - name: Run Windows tests with Fast DDS
         shell: cmd
         env:
           RMW_IMPLEMENTATION: rmw_fastrtps_cpp
@@ -121,10 +121,10 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --ctest-args -E "test_pub_sub_launch_cpp|test_pub_sub_launch" --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
-      - name: Run Windows tests with Cyclone DDS (skip launch test)
+      - name: Run Windows tests with Cyclone DDS
         shell: cmd
         env:
           RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
@@ -132,10 +132,10 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --ctest-args -E "test_pub_sub_launch_cpp|test_pub_sub_launch" --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
-      - name: Run Windows tests with Zenoh (skip launch test)
+      - name: Run Windows tests with Zenoh
         shell: cmd
         env:
           RMW_IMPLEMENTATION: rmw_zenoh_cpp
@@ -143,7 +143,7 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --ctest-args -E "test_pub_sub_launch_cpp|test_pub_sub_launch" --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
       - name: Upload colcon logs
