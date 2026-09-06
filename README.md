@@ -89,9 +89,12 @@ executables. Both tests start the Zenoh router as a normal launch-managed
 `ExecuteProcess` on Ubuntu; the Windows tests use separate router cleanup
 because this assumption does not hold reliably there.
 
-The C++ package runs `ament_lint_auto` on both platforms where the available
-tools permit it. Its CMake file excludes `ament_cmake_clang_tidy` on Windows
-because that check is not reliable in the ROS 2 Windows environment.
+The C++ package runs `ament_lint_auto` on both platforms. The Windows workflow
+replaces the archive's `clang-format` pixi dependency with `clang-tools` so
+that it also provides `clang-tidy`. Until the upstream Windows executable
+lookup fix from [ament/ament_lint#591](https://github.com/ament/ament_lint/pull/591)
+is available in the ROS archive, the workflow applies the corresponding patch
+before building the packages.
 
 When using the standalone Lyrical Linux archive instead of the ROS Tooling
 container, its `setup.bash` can reference optional variables such as
