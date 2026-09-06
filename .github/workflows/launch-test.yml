@@ -69,7 +69,7 @@ jobs:
       - name: Patch ament_lint executable lookup on Windows
         shell: pwsh
         run: |
-          $sitePackages = pixi run --manifest-path $env:PIXI_MANIFEST python -c "import site; print(site.getsitepackages()[0])"
+          $sitePackages = pixi run --manifest-path $env:PIXI_MANIFEST python -c "import ament_clang_tidy; from pathlib import Path; print(Path(ament_clang_tidy.__file__).parent.parent)"
           $patchFile = Join-Path $env:GITHUB_WORKSPACE '.github/patches/ament_lint-windows-executable-lookup.patch'
           Push-Location $sitePackages
           try {
