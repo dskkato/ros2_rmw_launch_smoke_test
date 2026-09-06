@@ -53,6 +53,8 @@ jobs:
       - name: Enable clang-tidy in pixi environment
         shell: pwsh
         run: |
+          # Workaround for the archive dependency issue; revisit when updating
+          # the ROS 2 release/archive: https://github.com/ros2/ros2/issues/1864
           $manifest = Get-Content -Raw -Path $env:PIXI_MANIFEST
           $oldDependency = 'clang-format = "==18.1.8"'
           $newDependency = 'clang-tools = "==18.1.8"'
@@ -89,6 +91,8 @@ jobs:
       - name: Patch ament_lint executable lookup on Windows
         shell: pwsh
         run: |
+          # Workaround for the Windows executable lookup issue; revisit when
+          # updating the ROS 2 release/archive: https://github.com/ament/ament_lint/issues/590
           $sitePackages = Join-Path $env:ROS2_ROOT 'Lib/site-packages'
           if (-not (Test-Path (Join-Path $sitePackages 'ament_clang_tidy/main.py'))) {
             throw "Could not find the ROS ament_lint Python packages in $sitePackages"
