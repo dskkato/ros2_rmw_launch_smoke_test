@@ -21,27 +21,31 @@
 
 using namespace std::chrono_literals;
 
-class SmokeSubscriber : public rclcpp::Node {
+class SmokeSubscriber : public rclcpp::Node
+{
 public:
   SmokeSubscriber()
-      : Node("smoke_subscriber"), received_(0), next_message_(0),
-        failed_(false), deadline_(std::chrono::steady_clock::now() + 20s) {
+  : Node("smoke_subscriber"),
+    received_(0),
+    next_message_(0),
+    failed_(false),
+    deadline_(std::chrono::steady_clock::now() + 20s)
+  {
     subscription_ = create_subscription<std_msgs::msg::String>(
-        "smoke_chatter", 10,
-        [this](std_msgs::msg::String::ConstSharedPtr message) {
-          receive(message);
-        });
+      "smoke_chatter", 10,
+      [this](std_msgs::msg::String::ConstSharedPtr message) { receive(message); });
     watchdog_ = create_wall_timer(100ms, [this]() { check_progress(); });
   }
 
   bool failed() const { return failed_; }
 
 private:
-  void receive(std_msgs::msg::String::ConstSharedPtr message) {
+  void receive(std_msgs::msg::String::ConstSharedPtr message)
+  {
     const auto expected = "hello-" + std::to_string(next_message_);
     if (message->data != expected) {
-      RCLCPP_ERROR(get_logger(), "expected=%s, received=%s", expected.c_str(),
-                   message->data.c_str());
+      RCLCPP_ERROR(
+        get_logger(), "expected=%s, received=%s", expected.c_str(), message->data.c_str());
       failed_ = true;
       rclcpp::shutdown();
       return;
@@ -56,10 +60,10 @@ private:
     }
   }
 
-  void check_progress() {
+  void check_progress()
+  {
     if (std::chrono::steady_clock::now() > deadline_) {
-      RCLCPP_ERROR(get_logger(), "timed out after receiving %d messages",
-                   received_);
+      RCLCPP_ERROR(get_logger(), "timed out after receiving %d messages", received_);
       failed_ = true;
       watchdog_->cancel();
       rclcpp::shutdown();
@@ -74,7 +78,8 @@ private:
   std::chrono::steady_clock::time_point deadline_;
 };
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[])
+{
   rclcpp::init(argc, argv);
   auto node = std::make_shared<SmokeSubscriber>();
   rclcpp::spin(node);
