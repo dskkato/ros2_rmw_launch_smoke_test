@@ -26,15 +26,26 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Cache ROS 2 Lyrical archive
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ros2_lyrical/${{ env.ROS_ARCHIVE }}
+          key: ros2-${{ runner.os }}-${{ env.ROS_RELEASE_TAG }}-${{ env.ROS_ARCHIVE }}
+
       - name: Download ROS 2 Lyrical archive
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $ros2Prefix = Join-Path $env:RUNNER_TEMP 'ros2_lyrical'
           $releaseUrl = "https://github.com/ros2/ros2/releases/download/$env:ROS_RELEASE_TAG/$env:ROS_ARCHIVE"
+          $archivePath = Join-Path $ros2Prefix $env:ROS_ARCHIVE
           New-Item -ItemType Directory -Force -Path $ros2Prefix | Out-Null
-          Invoke-WebRequest -Uri $releaseUrl -OutFile (Join-Path $ros2Prefix $env:ROS_ARCHIVE)
-          Expand-Archive -Path (Join-Path $ros2Prefix $env:ROS_ARCHIVE) -DestinationPath $ros2Prefix -Force
+          if (-not (Test-Path $archivePath)) {
+            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
+          } else {
+            Write-Host "Using cached ROS 2 archive: $archivePath"
+          }
+          Expand-Archive -Path $archivePath -DestinationPath $ros2Prefix -Force
           $ros2Root = Join-Path $ros2Prefix 'ros2-windows'
           "ROS2_ROOT=$ros2Root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PIXI_MANIFEST=$(Join-Path $ros2Root 'pixi.toml')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -55,6 +66,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.10.1
         with:
           manifest-path: ${{ runner.temp }}/ros2_lyrical/ros2-windows/pixi.toml
+          cache: true
           run-install: false
 
       - name: Install pixi environment
