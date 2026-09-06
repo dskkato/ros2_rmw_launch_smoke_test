@@ -3,6 +3,15 @@ project(rmw_launch_smoke_test_cpp)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# The ROS 2 Windows archive is built with the Release MSVC runtime.  Keep this
+# smoke-test package ABI-compatible with that archive when using a
+# single-configuration generator such as Ninja.
+if(WIN32 AND NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+  message(FATAL_ERROR
+    "Windows builds of ${PROJECT_NAME} require CMAKE_BUILD_TYPE=Release "
+    "when using a single-configuration generator (for example, Ninja).")
+endif()
+
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
