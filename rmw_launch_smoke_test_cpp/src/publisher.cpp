@@ -21,19 +21,15 @@
 
 using namespace std::chrono_literals;
 
-class SmokePublisher : public rclcpp::Node
-{
+class SmokePublisher : public rclcpp::Node {
 public:
-  SmokePublisher()
-  : Node("smoke_publisher"), count_(0)
-  {
+  SmokePublisher() : Node("smoke_publisher"), count_(0) {
     publisher_ = create_publisher<std_msgs::msg::String>("smoke_chatter", 10);
-    publish_timer_ = create_wall_timer(200ms, [this]() {publish();});
+    publish_timer_ = create_wall_timer(200ms, [this]() { publish(); });
   }
 
 private:
-  void publish()
-  {
+  void publish() {
     std_msgs::msg::String message;
     message.data = "hello-" + std::to_string(count_);
     publisher_->publish(message);
@@ -42,7 +38,7 @@ private:
 
     if (count_ == 5) {
       publish_timer_->cancel();
-      stop_timer_ = create_wall_timer(200ms, []() {rclcpp::shutdown();});
+      stop_timer_ = create_wall_timer(200ms, []() { rclcpp::shutdown(); });
     }
   }
 
@@ -52,8 +48,7 @@ private:
   int count_;
 };
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<SmokePublisher>();
   rclcpp::spin(node);
