@@ -97,7 +97,7 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --parallel-workers 1 --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
       - name: Run launch test with Cyclone DDS
@@ -108,7 +108,7 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --parallel-workers 1 --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
       - name: Run launch test with Zenoh
@@ -119,7 +119,7 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           call "%ROS2_ROOT%\setup.bat"
           call install\setup.bat
-          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --event-handlers console_direct+
+          pixi run --manifest-path "%PIXI_MANIFEST%" colcon test --merge-install --parallel-workers 1 --event-handlers console_direct+
           pixi run --manifest-path "%PIXI_MANIFEST%" colcon test-result --verbose
 
       - name: Upload colcon logs
