@@ -78,8 +78,7 @@ def generate_test_description():
 
     actions.extend([
         TimerAction(period=1.0, actions=[subscriber]),
-        # Allow Fast DDS discovery to complete before publishing.
-        TimerAction(period=5.0, actions=[publisher]),
+        TimerAction(period=3.0, actions=[publisher]),
     ])
     actions.append(RegisterEventHandler(OnProcessExit(
         target_action=subscriber,
