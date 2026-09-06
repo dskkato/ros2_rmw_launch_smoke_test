@@ -35,11 +35,6 @@ install(
 )
 
 if(BUILD_TESTING)
-  if(WIN32)
-    # clang-tidy is not reliable in the ROS 2 Windows environment.
-    set(AMENT_LINT_AUTO_EXCLUDE ament_cmake_clang_tidy)
-  endif()
-
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
