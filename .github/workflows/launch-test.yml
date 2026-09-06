@@ -67,11 +67,7 @@ jobs:
         with:
           manifest-path: ${{ runner.temp }}/ros2_lyrical/ros2-windows/pixi.toml
           cache: true
-          run-install: false
-
-      - name: Install pixi environment
-        shell: cmd
-        run: pixi install --manifest-path "%PIXI_MANIFEST%"
+          run-install: true
 
       - name: Prepare ROS 2 pixi environment
         shell: cmd
